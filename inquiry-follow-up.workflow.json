@@ -1,0 +1,261 @@
+{
+  "name": "OQVIAN DEMO - Inquiry Follow-Up (fictional business)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "oqvian-demo-inquiry-follow-up",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "eac887f3-2380-4bc4-8201-b8e1f67b23c1",
+      "name": "Test Webhook (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "oqvian-demo-inquiry-follow-up"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst clean = (value, max) => String(value ?? '').trim().slice(0, max);\nconst name = clean(input.name, 120);\nconst email = clean(input.email, 254).toLowerCase();\nconst phone = clean(input.phone, 40);\nconst message = clean(input.message, 2000);\nconst website = clean(input.website, 500);\nconst emailOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(email);\nif (website !== '') throw Object.assign(new Error('Rejected: honeypot field must be empty.'), { httpCode: 400 });\nif (!name || !emailOk || !message) throw Object.assign(new Error('Rejected: name, valid email, and message are required.'), { httpCode: 400 });\nreturn [{ json: { name, email, phone, message, received_at: new Date().toISOString() } }];"
+      },
+      "id": "c70642f1-0d6b-4c29-8d5b-11e1ee8933e8",
+      "name": "Validate & normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "XnpHQ5AL4qyYKKhJ",
+          "mode": "list",
+          "cachedResultName": "demo_inquiries"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $('Validate & normalize').first().json.name }}",
+            "email": "={{ $('Validate & normalize').first().json.email }}",
+            "phone": "={{ $('Validate & normalize').first().json.phone }}",
+            "message": "={{ $('Validate & normalize').first().json.message }}",
+            "received_at": "={{ $('Validate & normalize').first().json.received_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d4723765-858a-4728-8eac-ec896f09962c",
+      "name": "Insert demo inquiry (Data table)",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "owner@example.com",
+        "subject": "[TEST] New Demo Dental KL inquiry",
+        "emailFormat": "text",
+        "text": "={{ 'FICTIONAL BUSINESS DEMO \u2014 Demo Dental KL\\n\\nName: ' + $('Validate & normalize').first().json.name + '\\nEmail: ' + $('Validate & normalize').first().json.email + '\\nPhone: ' + ($('Validate & normalize').first().json.phone || '(not provided)') + '\\nReceived: ' + $('Validate & normalize').first().json.received_at + '\\n\\nMessage:\\n' + $('Validate & normalize').first().json.message }}",
+        "options": {}
+      },
+      "id": "095ad1b5-cbb0-4ee8-8423-39b1c502208b",
+      "name": "Owner alert (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $('Validate & normalize').first().json.email }}",
+        "subject": "[TEST] Demo Dental KL \u2014 we received your inquiry",
+        "emailFormat": "text",
+        "text": "={{ 'Hello ' + $('Validate & normalize').first().json.name + ',\\n\\nThank you for contacting Demo Dental KL. This is an automated DEMO reply from a fictional business. We have received your inquiry and will follow up soon. Please do not rely on this demo for an actual appointment or dental care.\\n\\nSalam ' + $('Validate & normalize').first().json.name + ',\\n\\nTerima kasih kerana menghubungi Demo Dental KL. Ini ialah balasan DEMO automatik daripada perniagaan rekaan. Kami telah menerima pertanyaan anda dan akan menghubungi anda semula tidak lama lagi. Sila jangan gunakan demo ini untuk janji temu atau rawatan pergigian sebenar.\\n\\n\u2014 Demo Dental KL (fictional business demo)' }}",
+        "options": {}
+      },
+      "id": "1b8bf2cd-8ee8-451d-a775-73c06f23f254",
+      "name": "Submitter auto-reply (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        0
+      ],
+      "credentials": {
+        "smtp": {
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\":true,\"message\":\"Demo inquiry received\",\"demo\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "3bdb77bf-c54f-4ec3-b53c-92408cd4fb88",
+      "name": "Respond 200 JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## DEMO STAND-IN: n8n Data table\n\n`demo_inquiries` is an internal n8n Data table used only for this demo. It stands in for the Google Sheet named in OQVIAN offer #1; it is not a Google Sheet and no Google Sheets integration is configured.\n\nFictional business: Demo Dental KL. Emails are marked [TEST]. Keep workflow inactive and use only the webhook Test URL.",
+        "height": 250,
+        "width": 420,
+        "color": 5
+      },
+      "id": "a1a539db-bf97-47a0-9a80-4dc48e373da0",
+      "name": "DEMO STAND-IN notice",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Test Webhook (POST)": {
+      "main": [
+        [
+          {
+            "node": "Validate & normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & normalize": {
+      "main": [
+        [
+          {
+            "node": "Insert demo inquiry (Data table)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert demo inquiry (Data table)": {
+      "main": [
+        [
+          {
+            "node": "Owner alert (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Owner alert (SMTP)": {
+      "main": [
+        [
+          {
+            "node": "Submitter auto-reply (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submitter auto-reply (SMTP)": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
